@@ -1,4 +1,4 @@
-import { AstVariable } from "../ast/ast-variable";
+import { AstVariable } from '../ast/ast.js';
 
 
 export class Variable {

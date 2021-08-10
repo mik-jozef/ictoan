@@ -1,16 +1,11 @@
 import { SyntaxTreeNode, IdentifierToken, NumberToken, TextToken, Token, Caten, Match, Maybe, Or, Repeat } from 'lr-parser-typescript';
 
 import { token } from './tokenizer.js';
-import { AstFunction, equalsBodyBlockOp, equalsTypeExprLadder0 } from './ast-function.js';
-import { equalsTypeExprLadder2, equalsExprExprLadder, AstLambda } from './ast-function.js';
-import { equalsTypeExprLadder3, equalsDefaultArgExprLadder } from './ast-function.js';
-import { AstVariable, equalsTypeExprLadder1, equalsValueExprLadder } from './ast-variable.js';
-import { equalsTypeExprLadder4, AstClass } from './ast-class.js';
+import { Import } from './import.js';
 
 
 const equalsBlockOp = new Match( false, 'value', null! );
 const equalsQuantifierOp = new Match( false, 'value', null! );
-const equalsSetLiteral = new Match( false, 'value', null! );
 const equalsObjectLiteral = new Match( false, 'value', null! );
 const equalsFunctionCallOp = new Match( false, 'value', null! );
 const equalsMemberAccessOp = new Match( false, 'value', null! );
@@ -25,21 +20,150 @@ const equalsSubOp = new Match( false, 'value', null! );
 const equalsModuloOp = new Match( false, 'value', null! );
 const equalsMagmaOp = new Match( false, 'value', null! );
 const equalsComparisonOp = new Match( false, 'value', null! );
-const equalsIntersectionOp = new Match( false, 'value', null! );
-const equalsUnionOp = new Match( false, 'value', null! );
+const equalsConjunctionOp = new Match( false, 'value', null! );
+const equalsDisjunctionOp = new Match( false, 'value', null! );
 const equalsImplicationOp = new Match( false, 'value', null! );
 const equalsConditionalOp = new Match( false, 'value', null! );
 const equalsWhereOp = new Match( false, 'value', null! );
-const equalsObjectRestriction = new Match( false, 'value', null! );
+
+const equalsComplementOp = new Match( false, 'value', null! );
+const equalsIntersectionOp = new Match( false, 'value', null! );
+const equalsUnionOp = new Match( false, 'value', null! );
+const equalsTypeImplicationOp = new Match( false, 'value', null! );
 
 const equalsExprLadder = new Match( false, 'value', null! );
 const equalsReturnOp = new Match( false, 'value', null! );
+
+const equalsTypeExprLadder0 = new Match( false, 'type', null! );
+const equalsTypeExprLadder1 = new Match( false, 'type', null! );
+const equalsTypeExprLadder2 = new Match( false, 'type', null! );
+const equalsTypeExprLadder3 = new Match( false, 'type', null! );
+
+const equalsValueExprLadder = new Match( false, 'value', null! );
+const equalsDefaultArgExprLadder = new Match( false, 'defaultArg', null! );
+const equalsBodyBlockOp = new Match( false, 'body', null! );
+const equalsExprExprLadder = new Match( false, 'expr', null! );
+
+class TypeMember extends SyntaxTreeNode {
+  name!: IdentifierToken;
+  type!: Expr;
+  
+  static rule = new Caten(
+    new Match( false, 'name', token('identifier') ),
+    token(':'),
+    equalsTypeExprLadder0,
+    token(';'),
+  );
+}
+
+export class AstType extends SyntaxTreeNode {
+  name!: IdentifierToken | null;
+  members!: TypeMember;
+  
+  static rule = new Caten(
+    token('type'),
+    new Maybe(
+      new Match( false, 'name', token('identifier') ),
+    ),
+    token('{'),
+    new Repeat(
+      new Match( true, 'members', TypeMember ),
+    ),
+    token('}'),
+  );
+}
+
+class FunctionParam extends SyntaxTreeNode {
+  name!: IdentifierToken;
+  type!: Expr | null;
+  body!: Expr[];
+  
+  static rule = new Caten(
+    new Match( false, 'name', token('identifier') ),
+    new Maybe(
+      new Caten(
+        token(':'),
+        equalsTypeExprLadder1,
+      ),
+    ),
+    new Maybe(
+      new Caten(
+        token('='),
+        equalsDefaultArgExprLadder,
+      ),
+    ),
+    token(','),
+  );
+}
+
+class FunctionHead extends SyntaxTreeNode {
+  name!: IdentifierToken;
+  type!: Expr | null;
+  args!: FunctionParam[];
+  
+  static rule = new Caten(
+    token('fn'),
+    new Match( false, 'name', token('identifier') ),
+    token('('),
+    new Repeat(
+      new Match( true, 'args', FunctionParam ),
+    ),
+    token(')'),
+    new Maybe(
+      new Caten(
+        token(':'),
+        equalsTypeExprLadder2,
+      ),
+    ),
+  );
+}
+
+export abstract class AstFunctionLambda extends SyntaxTreeNode {}
+
+export class AstFunction extends AstFunctionLambda {
+  head!: FunctionHead;
+  body!: BlockOp;
+  
+  static rule = new Caten(
+    new Match( false, 'head', FunctionHead ),
+    equalsBodyBlockOp,
+  );
+}
+
+export class AstLambda extends AstFunctionLambda {
+  head!: FunctionHead;
+  expr!: Expr;
+  
+  static rule = new Caten(
+    new Match( false, 'head', FunctionHead ),
+    token('=>'),
+    equalsExprExprLadder,
+  );
+}
+
+export class AstVariable extends SyntaxTreeNode {
+  name!: IdentifierToken;
+  type!: Expr | null;
+  value!: Expr;
+  
+  static rule = new Caten(
+    token('let'),
+    new Match( false, 'name', token('identifier') ),
+    new Maybe(
+      new Caten(
+        token(':'),
+        equalsTypeExprLadder3,
+      ),
+    ),
+    token('='),
+    equalsValueExprLadder,
+  );
+}
 
 type BottomOrLower =
   | BlockOp
   | QuantifierOp
   | AstFunction
-  | SetLiteral
   | ObjectLiteral
   | TextToken
   | NumberToken
@@ -65,7 +189,6 @@ export class BottomOfLadder extends SyntaxTreeNode {
     equalsBlockOp,
     equalsQuantifierOp,
     new Match( false, 'value', AstFunction ),
-    equalsSetLiteral,
     equalsObjectLiteral,
     new Match( false, 'value', token('text') ),
     new Match( false, 'value', token('number') ),
@@ -180,37 +303,37 @@ export class ComparisonIsOpsLadder extends SyntaxTreeNode {
   );
 }
 
-type IntersectionOpOrLower =
-  | IntersectionOp
+type ConjunctionOpOrLower =
+  | ConjunctionOp
   | ComparisonIsOpsOrLower
 ;
 
-export class IntersectionOpLadder extends SyntaxTreeNode {
+export class ConjunctionOpLadder extends SyntaxTreeNode {
   static hidden = true;
   
   static rule = new Or(
-    equalsIntersectionOp,
+    equalsConjunctionOp,
     new Match( false, 'value', ComparisonIsOpsLadder ),
   );
 }
 
-type UnionOpOrLower =
-  | UnionOp
-  | IntersectionOpOrLower
+type DisjunctionOpOrLower =
+  | DisjunctionOp
+  | ConjunctionOpOrLower
 ;
 
-export class UnionOpLadder extends SyntaxTreeNode {
+export class DisjunctionOpLadder extends SyntaxTreeNode {
   static hidden = true;
   
   static rule = new Or(
-    equalsUnionOp,
-    new Match( false, 'value', IntersectionOpLadder ),
+    equalsDisjunctionOp,
+    new Match( false, 'value', ConjunctionOpLadder ),
   );
 }
 
 type ImplicationOpOrLower =
   | ImplicationOp
-  | UnionOpOrLower
+  | DisjunctionOpOrLower
 ;
 
 export class ImplicationOpLadder extends SyntaxTreeNode {
@@ -218,7 +341,7 @@ export class ImplicationOpLadder extends SyntaxTreeNode {
   
   static rule = new Or(
     equalsImplicationOp,
-    new Match( false, 'value', UnionOpLadder ),
+    new Match( false, 'value', DisjunctionOpLadder ),
   );
 }
 
@@ -238,7 +361,6 @@ export class ConditionalOpLadder extends SyntaxTreeNode {
 
 export type Expr =
   | WhereOp
-  | ObjectRestriction
   | ConditionalOpOrLower
 ;
 
@@ -247,7 +369,6 @@ export class ExprLadder extends SyntaxTreeNode {
   
   static rule: Or = new Or(
     equalsWhereOp,
-    equalsObjectRestriction,
     new Match( false, 'value', ConditionalOpLadder ),
   );
 }
@@ -277,7 +398,7 @@ export class BlockOp extends SyntaxTreeNode {
           new Match( true, 'exprs', ReturnOp ),
           new Match( true, 'exprs', AstLambda ),
           new Match( true, 'exprs', AstVariable ),
-          new Match( true, 'exprs', AstClass ),
+          new Match( true, 'exprs', AstType ),
         ),
         token(';'),
       ),
@@ -328,25 +449,17 @@ export class QuantifierOp extends SyntaxTreeNode {
       TODO the lambda version.
     
       token('=>'),
-      new Match( false, 'body', ExprLadder ),
+      new Match( true, 'body', ExprLadder ),
     /*/
   );
 }
-
-export class SetLiteral extends SyntaxTreeNode {
-  
-  // TODO. Do I want them?
-  static rule: Caten = new Or();
-}
-
-const equalsNameIdentifier = new Match( false, 'name', token("identifier") );
 
 class ObjectProp extends SyntaxTreeNode {
   name!: IdentifierToken;
   value!: Expr;
   
   static rule = new Caten(
-    equalsNameIdentifier,
+    new Match( false, 'name', token("identifier") ),
     token(":"),
     equalsValueExprLadder,
     token(","),
@@ -368,11 +481,14 @@ export class ObjectLiteral extends SyntaxTreeNode {
 }
 
 export class FunctionCallOp extends SyntaxTreeNode {
-  expr!: BottomOrLower;
+  // IMPROVEMENT: first-class functions.
+  // `expr!: BottomOrLower;`
+  expr!: IdentifierToken;
   args!: Expr[];
   
   static rule = new Caten(
-    new Match( false, 'expr', BottomOfLadder ),
+    // new Match( false, 'expr', BottomOfLadder ),
+    new Match( false, 'expr', token('identifier') ),
     token('('),
     new Repeat(
       new Caten(
@@ -417,6 +533,15 @@ export class NegationOp extends SyntaxTreeNode {
   
   static rule: Caten = new Caten(
     token('!'),
+    new Match( false, 'expr', LeftUnaryOpsLadder ),
+  );
+}
+
+export class TypeNegationOp extends SyntaxTreeNode {
+  expr!: LeftUnaryOpsOrLower;
+  
+  static rule: Caten = new Caten(
+    token('~'),
     new Match( false, 'expr', LeftUnaryOpsLadder ),
   );
 }
@@ -554,42 +679,42 @@ export class ComparisonOp extends SyntaxTreeNode {
   );
 }
 
-export class IntersectionOp extends SyntaxTreeNode {
-  left!: IntersectionOpOrLower;
+export class ConjunctionOp extends SyntaxTreeNode {
+  left!: ConjunctionOpOrLower;
   right!: MagmaOpOrLower;
   
   static rule: Caten = new Caten(
-    new Match( false, 'left', IntersectionOpLadder ),
-    token('&'),
+    new Match( false, 'left', ConjunctionOpLadder ),
+    token('&&'),
     new Match( false, 'right', MagmaOpLadder ),
   );
 }
 
-export class UnionOp extends SyntaxTreeNode {
-  left!: UnionOpOrLower;
-  right!: IntersectionOpOrLower;
+export class DisjunctionOp extends SyntaxTreeNode {
+  left!: DisjunctionOpOrLower;
+  right!: ConjunctionOpOrLower;
   
   static rule: Caten = new Caten(
-    new Match( false, 'left', UnionOpLadder ),
-    token('|'),
-    new Match( false, 'right', IntersectionOpLadder ),
+    new Match( false, 'left', DisjunctionOpLadder ),
+    token('||'),
+    new Match( false, 'right', ConjunctionOpLadder ),
   );
 }
 
 export class ImplicationOp extends SyntaxTreeNode {
-  terms!: UnionOpOrLower;
+  terms!: DisjunctionOpOrLower;
   ops!: (
-    | Token<'->'>
-    | Token<'<-'>
+    | Token<'-->'>
+    | Token<'<--'>
     | Token<'<->'>
   );
   
   static rule = new Caten(
     new Repeat(
-      new Match( true, 'terms', UnionOpLadder ),
+      new Match( true, 'terms', DisjunctionOpLadder ),
       new Or(
-        new Match( true, 'ops', token('->')),
-        new Match( true, 'ops', token('<-')),
+        new Match( true, 'ops', token('-->')),
+        new Match( true, 'ops', token('<--')),
         new Match( true, 'ops', token('<->')),
       ),
       2,
@@ -598,12 +723,12 @@ export class ImplicationOp extends SyntaxTreeNode {
 }
 
 export class ConditionalOp extends SyntaxTreeNode {
-  cond!: UnionOpOrLower;
+  cond!: DisjunctionOpOrLower;
   ifYes!: Expr | null;
   ifNo!: ConditionalOpOrLower | null;
   
   static rule: Caten = new Caten(
-    new Match( false, 'cond', UnionOpLadder ),
+    new Match( false, 'cond', DisjunctionOpLadder ),
     new Or(
       new Caten(
         token('then'),
@@ -624,13 +749,13 @@ export class ConditionalOp extends SyntaxTreeNode {
 }
 
 export class WhereOp extends SyntaxTreeNode {
-  left!: UnionOpOrLower;
+  left!: DisjunctionOpOrLower;
   right!: ConditionalOpOrLower;
   
   name!: IdentifierToken;
   
   static rule = new Caten(
-    new Match( false, 'left', UnionOpLadder ),
+    new Match( false, 'left', DisjunctionOpLadder ),
     new Maybe(
       new Caten(
         token('as'),
@@ -642,43 +767,33 @@ export class WhereOp extends SyntaxTreeNode {
   );
 }
 
-class FieldRestriction extends SyntaxTreeNode {
-  name!: IdentifierToken;
-  value!: Expr;
+export class AstModule extends SyntaxTreeNode {
+  imports!: Import[];
+  defs!: (AstType | AstFunction | AstLambda | AstVariable)[];
   
   static rule = new Caten(
-    equalsNameIdentifier,
-    token(':'),
-    equalsValueExprLadder,
-    token(';'),
-  );
-}
-
-export class ObjectRestriction extends SyntaxTreeNode {
-  restrictions!: (FieldRestriction | Expr)[];
-  expr!: Expr;
-  
-  static rule = new Caten(
-    new Match( false, 'expr', ExprLadder ),
-    token('with'),
-    token('{'),
+    new Repeat(
+      new Match( true, 'imports', Import ),
+    ),
     new Repeat(
       new Or(
-        new Match( true, 'restrictions', FieldRestriction ),
         new Caten(
-          token('where'),
-          new Match( true, 'restrictions', ExprLadder ),
+          new Match( true, 'defs', AstLambda ),
           token(';'),
         ),
+        new Caten(
+          new Match( true, 'defs', AstVariable ),
+          token(';'),
+        ),
+        new Match( true, 'defs', AstFunction ),
+        new Match( true, 'defs', AstType ),
       ),
     ),
-    token('}'),
   );
 }
 
 equalsBlockOp.match = BlockOp;
 equalsQuantifierOp.match = QuantifierOp;
-equalsSetLiteral.match = SetLiteral;
 equalsObjectLiteral.match = ObjectLiteral;
 equalsFunctionCallOp.match = FunctionCallOp;
 equalsMemberAccessOp.match = MemberAccessOp;
@@ -693,13 +808,17 @@ equalsSubOp.match = SubOp;
 equalsModuloOp.match = ModuloOp;
 equalsMagmaOp.match = MagmaOp;
 equalsComparisonOp.match = ComparisonOp;
-equalsIntersectionOp.match = IntersectionOp;
-equalsUnionOp.match = UnionOp;
+equalsConjunctionOp.match = ConjunctionOp;
+equalsDisjunctionOp.match = DisjunctionOp;
 equalsImplicationOp.match = ImplicationOp;
 equalsConditionalOp.match = ConditionalOp;
 equalsWhereOp.match = WhereOp;
-equalsObjectRestriction.match = ObjectRestriction;
-
+/*
+equalsComplementOp.match = ComplementOp;
+equalsIntersectionOp.match = IntersectionOp;
+equalsUnionOp.match = UnionOp;
+equalsTypeImplicationOp.match = TypeImplicationOp;
+*/
 equalsExprLadder.match = ExprLadder;
 equalsReturnOp.match = ReturnOp;
 
@@ -710,5 +829,4 @@ equalsTypeExprLadder0.match = ExprLadder;
 equalsTypeExprLadder1.match = ExprLadder;
 equalsTypeExprLadder2.match = ExprLadder;
 equalsTypeExprLadder3.match = ExprLadder;
-equalsTypeExprLadder4.match = ExprLadder;
 equalsValueExprLadder.match = ExprLadder;

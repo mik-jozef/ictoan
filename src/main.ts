@@ -3,7 +3,7 @@ import { exit as processExit } from "process";
 import { Parser } from 'lr-parser-typescript';
 
 import { resolvePath } from './resolve-path.js';
-import { AstModule } from './ast/ast-module.js';
+import { AstModule } from './ast/ast.js';
 import { tokenizer } from './ast/tokenizer.js';
 import { Module } from './potpo/module.js';
 

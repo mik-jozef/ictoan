@@ -1,4 +1,4 @@
-import { AstFunction, AstLambda } from "../ast/ast-function";
+import { AstFunction, AstLambda } from '../ast/ast.js';
 
 
 export class PotpoFunction {
