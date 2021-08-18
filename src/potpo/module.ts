@@ -1,4 +1,4 @@
-import { AstModule, AstFunctionLambda, AstType, AstLambda, AstFunction, AstVariable } from "../ast/ast.js";
+import { AstModule, AstType, AstFunction, AstVariable } from "../ast/ast.js";
 import { Path } from "../main.js";
 import { PotpoType } from "./potpo-type.js";
 import { PotpoFunction } from "./potpo-function.js";
@@ -39,13 +39,10 @@ export class Module {
     this.imports = astModule.imports.map(imp => new Import(imp.path.value, imp.as?.value || null));
     
     astModule.defs.forEach(def => {
-      const name = def instanceof AstFunctionLambda ? def.head.name : def.name;
-      
       switch (def.constructor) {
-        case AstType: this.defs.set(name.value, new PotpoType(def as AstType)); break;
-        case AstFunction:
-        case AstLambda: this.defs.set(name.value, new PotpoFunction(def as AstFunction | AstLambda)); break;
-        case AstVariable: this.defs.set(name.value, new Variable(def as AstVariable)); break;
+        case AstType: this.defs.set(def.name.value, new PotpoType(def as AstType)); break;
+        case AstFunction: this.defs.set(def.name.value, new PotpoFunction(def as AstFunction)); break;
+        case AstVariable: this.defs.set(def.name.value, new Variable(def as AstVariable)); break;
         default: throw new Error('programmer error');
       }
     });

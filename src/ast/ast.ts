@@ -11,25 +11,15 @@ const equalsFunctionCallOp = new Match( false, 'value', null! );
 const equalsMemberAccessOp = new Match( false, 'value', null! );
 const equalsTypeArgumentList = new Match( false, 'value', null! );
 const equalsNegationOp = new Match( false, 'value', null! );
-const equalsInverseOp = new Match( false, 'value', null! );
-const equalsPowerOp = new Match( false, 'value', null! );
-const equalsMulOp = new Match( false, 'value', null! );
-const equalsDivOp = new Match( false, 'value', null! );
-const equalsAddOp = new Match( false, 'value', null! );
-const equalsSubOp = new Match( false, 'value', null! );
-const equalsModuloOp = new Match( false, 'value', null! );
-const equalsMagmaOp = new Match( false, 'value', null! );
-const equalsComparisonOp = new Match( false, 'value', null! );
 const equalsConjunctionOp = new Match( false, 'value', null! );
 const equalsDisjunctionOp = new Match( false, 'value', null! );
 const equalsImplicationOp = new Match( false, 'value', null! );
-const equalsConditionalOp = new Match( false, 'value', null! );
-const equalsWhereOp = new Match( false, 'value', null! );
-
 const equalsComplementOp = new Match( false, 'value', null! );
 const equalsIntersectionOp = new Match( false, 'value', null! );
 const equalsUnionOp = new Match( false, 'value', null! );
 const equalsTypeImplicationOp = new Match( false, 'value', null! );
+const equalsConditionalOp = new Match( false, 'value', null! );
+const equalsWhereOp = new Match( false, 'value', null! );
 
 const equalsExprLadder = new Match( false, 'value', null! );
 const equalsReturnOp = new Match( false, 'value', null! );
@@ -42,7 +32,6 @@ const equalsTypeExprLadder3 = new Match( false, 'type', null! );
 const equalsValueExprLadder = new Match( false, 'value', null! );
 const equalsDefaultArgExprLadder = new Match( false, 'defaultArg', null! );
 const equalsBodyBlockOp = new Match( false, 'body', null! );
-const equalsExprExprLadder = new Match( false, 'expr', null! );
 
 class TypeMember extends SyntaxTreeNode {
   name!: IdentifierToken;
@@ -57,14 +46,12 @@ class TypeMember extends SyntaxTreeNode {
 }
 
 export class AstType extends SyntaxTreeNode {
-  name!: IdentifierToken | null;
+  name!: IdentifierToken;
   members!: TypeMember;
   
   static rule = new Caten(
     token('type'),
-    new Maybe(
-      new Match( false, 'name', token('identifier') ),
-    ),
+    new Match( false, 'name', token('identifier') ),
     token('{'),
     new Repeat(
       new Match( true, 'members', TypeMember ),
@@ -96,10 +83,11 @@ class FunctionParam extends SyntaxTreeNode {
   );
 }
 
-class FunctionHead extends SyntaxTreeNode {
+export class AstFunction extends SyntaxTreeNode {
   name!: IdentifierToken;
-  type!: Expr | null;
+  returnType!: Expr | null;
   args!: FunctionParam[];
+  body!: BlockOp;
   
   static rule = new Caten(
     token('fn'),
@@ -115,29 +103,7 @@ class FunctionHead extends SyntaxTreeNode {
         equalsTypeExprLadder2,
       ),
     ),
-  );
-}
-
-export abstract class AstFunctionLambda extends SyntaxTreeNode {}
-
-export class AstFunction extends AstFunctionLambda {
-  head!: FunctionHead;
-  body!: BlockOp;
-  
-  static rule = new Caten(
-    new Match( false, 'head', FunctionHead ),
     equalsBodyBlockOp,
-  );
-}
-
-export class AstLambda extends AstFunctionLambda {
-  head!: FunctionHead;
-  expr!: Expr;
-  
-  static rule = new Caten(
-    new Match( false, 'head', FunctionHead ),
-    token('=>'),
-    equalsExprExprLadder,
   );
 }
 
@@ -161,16 +127,19 @@ export class AstVariable extends SyntaxTreeNode {
 }
 
 type BottomOrLower =
-  | BlockOp
-  | QuantifierOp
-  | AstFunction
-  | ObjectLiteral
   | TextToken
   | NumberToken
   | IdentifierToken
+  | BlockOp
+  | QuantifierOp
+  | ObjectLiteral
   | FunctionCallOp
   | MemberAccessOp
   | TypeArgumentList
+  /*/ Functions and types are not values.
+  | AstFunction
+  | AstType
+  /*/
 ;
 
 export class BottomOfLadder extends SyntaxTreeNode {
@@ -181,131 +150,43 @@ export class BottomOfLadder extends SyntaxTreeNode {
       token('('),
       new Or(
         equalsExprLadder,
-        equalsReturnOp,
-        new Match( false, 'value', AstLambda ),
+        equalsReturnOp, // TODO perhaps only allow inside a conditional?
       ),
       token(')'),
     ),
-    equalsBlockOp,
-    equalsQuantifierOp,
-    new Match( false, 'value', AstFunction ),
-    equalsObjectLiteral,
     new Match( false, 'value', token('text') ),
     new Match( false, 'value', token('number') ),
     new Match( false, 'value', token('identifier') ),
+    equalsBlockOp,
+    equalsQuantifierOp,
+    equalsObjectLiteral,
     equalsFunctionCallOp,
     equalsMemberAccessOp,
     equalsTypeArgumentList,
+    /*/ Functions and types are not values.
+    new Match( false, 'value', AstFunction ),
+    new Match( false, 'value', AstType ),
+    /*/
   );
 }
 
-type LeftUnaryOpsOrLower =
+type NegationOpOrLower =
   | NegationOp
-  | InverseOp
   | BottomOrLower
 ;
 
-export class LeftUnaryOpsLadder extends SyntaxTreeNode {
+export class NegationOpLadder extends SyntaxTreeNode {
   static hidden = true;
   
   static rule = new Or(
     equalsNegationOp,
-    equalsInverseOp,
     new Match( false, 'value', BottomOfLadder ),
-  );
-}
-
-type PowerOpOrLower =
-  | PowerOp
-  | LeftUnaryOpsOrLower
-;
-
-export class PowerOpLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    equalsPowerOp,
-    new Match( false, 'value', LeftUnaryOpsLadder ),
-  );
-}
-
-type MulDivOpsOrLower =
-  | MulOp
-  | DivOp
-;
-
-export class MulDivOpsLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    equalsMulOp,
-    equalsDivOp,
-  );
-}
-
-type AddSubOpsOrLower =
-  | AddOp
-  | SubOp
-  | MulDivOpsOrLower
-;
-
-export class AddSubOpsLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    equalsAddOp,
-    equalsSubOp,
-    new Match( false, 'value', MulDivOpsLadder ),
-  );
-}
-
-type AddSubModuloOpsOrLower =
-  | AddSubOpsOrLower
-  | ModuloOp
-  | PowerOpOrLower
-;
-
-export class AddSubModuloOpsLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    new Match( false, 'value', AddSubOpsLadder ),
-    equalsModuloOp,
-    new Match( false, 'value', PowerOpLadder ),
-  );
-}
-
-type MagmaOpOrLower =
-  | MagmaOp
-  | AddSubModuloOpsOrLower
-;
-
-export class MagmaOpLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    equalsMagmaOp,
-    new Match( false, 'value', AddSubModuloOpsLadder ),
-  );
-}
-
-type ComparisonIsOpsOrLower =
-  | ComparisonOp
-  | MagmaOpOrLower
-;
-
-export class ComparisonIsOpsLadder extends SyntaxTreeNode {
-  static hidden = true;
-  
-  static rule = new Or(
-    equalsComparisonOp,
-    new Match( false, 'value', MagmaOpLadder ),
   );
 }
 
 type ConjunctionOpOrLower =
   | ConjunctionOp
-  | ComparisonIsOpsOrLower
+  | NegationOpOrLower
 ;
 
 export class ConjunctionOpLadder extends SyntaxTreeNode {
@@ -313,7 +194,7 @@ export class ConjunctionOpLadder extends SyntaxTreeNode {
   
   static rule = new Or(
     equalsConjunctionOp,
-    new Match( false, 'value', ComparisonIsOpsLadder ),
+    new Match( false, 'value', NegationOpLadder ),
   );
 }
 
@@ -345,31 +226,75 @@ export class ImplicationOpLadder extends SyntaxTreeNode {
   );
 }
 
-type ConditionalOpOrLower =
-  | ConditionalOp
+type ComplementOpOrLower =
+  | ComplementOp
   | ImplicationOpOrLower
 ;
 
-export class ConditionalOpLadder extends SyntaxTreeNode {
+export class ComplementOpLadder extends SyntaxTreeNode {
   static hidden = true;
   
-  static rule = new Or(
-    equalsConditionalOp,
+  static rule: Or = new Or(
+    equalsComplementOp,
     new Match( false, 'value', ImplicationOpLadder ),
   );
 }
 
+type IntersectionOpOrLower =
+  | IntersectionOp
+  | ComplementOpOrLower
+;
+
+export class IntersectionOpLadder extends SyntaxTreeNode {
+  static hidden = true;
+  
+  static rule: Or = new Or(
+    equalsIntersectionOp,
+    new Match( false, 'value', ComplementOpLadder ),
+  );
+}
+
+type UnionOpOrLower =
+  | UnionOp
+  | IntersectionOpOrLower
+;
+
+export class UnionOpLadder extends SyntaxTreeNode {
+  static hidden = true;
+  
+  static rule: Or = new Or(
+    equalsUnionOp,
+    new Match( false, 'value', IntersectionOpLadder ),
+  );
+}
+
+type TypeImplicationOpOrLower =
+  | TypeImplicationOp
+  | UnionOpOrLower
+;
+
+export class TypeImplicationOpLadder extends SyntaxTreeNode {
+  static hidden = true;
+  
+  static rule: Or = new Or(
+    equalsTypeImplicationOp,
+    new Match( false, 'value', UnionOpLadder ),
+  );
+}
+
 export type Expr =
+  | ConditionalOp
   | WhereOp
-  | ConditionalOpOrLower
+  | TypeImplicationOpOrLower
 ;
 
 export class ExprLadder extends SyntaxTreeNode {
   static hidden = true;
   
   static rule: Or = new Or(
+    equalsConditionalOp,
     equalsWhereOp,
-    new Match( false, 'value', ConditionalOpLadder ),
+    new Match( false, 'value', TypeImplicationOpLadder ),
   );
 }
 
@@ -387,7 +312,7 @@ export class ReturnOp extends SyntaxTreeNode {
 }
 
 export class BlockOp extends SyntaxTreeNode {
-  exprs!: (Expr | ReturnOp | AstLambda | AstVariable)[];
+  exprs!: (Expr | ReturnOp | AstVariable | AstType)[];
   
   static rule = new Caten(
     token('{'),
@@ -396,7 +321,6 @@ export class BlockOp extends SyntaxTreeNode {
         new Or(
           new Match( true, 'exprs', ExprLadder ),
           new Match( true, 'exprs', ReturnOp ),
-          new Match( true, 'exprs', AstLambda ),
           new Match( true, 'exprs', AstVariable ),
           new Match( true, 'exprs', AstType ),
         ),
@@ -444,13 +368,6 @@ export class QuantifierOp extends SyntaxTreeNode {
       ),
     ),
     token('}'),
-    
-    /*/
-      TODO the lambda version.
-    
-      token('=>'),
-      new Match( true, 'body', ExprLadder ),
-    /*/
   );
 }
 
@@ -482,7 +399,7 @@ export class ObjectLiteral extends SyntaxTreeNode {
 
 export class FunctionCallOp extends SyntaxTreeNode {
   // IMPROVEMENT: first-class functions.
-  // `expr!: BottomOrLower;`
+  // `expr!: Expr;`
   expr!: IdentifierToken;
   args!: Expr[];
   
@@ -501,7 +418,7 @@ export class FunctionCallOp extends SyntaxTreeNode {
 }
 
 export class MemberAccessOp extends SyntaxTreeNode {
-  expr!: BottomOrLower;
+  expr!: Expr;
   member!: IdentifierToken;
   
   static rule: Caten = new Caten(
@@ -512,7 +429,7 @@ export class MemberAccessOp extends SyntaxTreeNode {
 }
 
 export class TypeArgumentList extends SyntaxTreeNode {
-  expr!: BottomOrLower;
+  expr!: Expr;
   types!: Expr[];
   
   static rule: Caten = new Caten(
@@ -529,170 +446,28 @@ export class TypeArgumentList extends SyntaxTreeNode {
 }
 
 export class NegationOp extends SyntaxTreeNode {
-  expr!: LeftUnaryOpsOrLower;
+  expr!: Expr;
   
   static rule: Caten = new Caten(
     token('!'),
-    new Match( false, 'expr', LeftUnaryOpsLadder ),
-  );
-}
-
-export class TypeNegationOp extends SyntaxTreeNode {
-  expr!: LeftUnaryOpsOrLower;
-  
-  static rule: Caten = new Caten(
-    token('~'),
-    new Match( false, 'expr', LeftUnaryOpsLadder ),
-  );
-}
-
-export class InverseOp extends SyntaxTreeNode {
-  expr!: LeftUnaryOpsOrLower;
-  
-  static rule: Caten = new Caten(
-    token('-'),
-    new Match( false, 'expr', LeftUnaryOpsLadder ),
-  );
-}
-
-const leftEqualsLeftUnaryOpsLadder = new Match( false, 'left', LeftUnaryOpsLadder );
-
-export class PowerOp extends SyntaxTreeNode {
-  left!: LeftUnaryOpsOrLower;
-  right!: LeftUnaryOpsOrLower;
-  
-  static rule: Caten = new Caten(
-    leftEqualsLeftUnaryOpsLadder,
-    token('**'),
-    new Match( false, 'right', LeftUnaryOpsLadder ),
-  );
-}
-
-const leftEqualsPowerOpLadder = new Match( false, 'left', PowerOpLadder );
-
-const orLeftEqualsMulDivPowerOps = new Or(
-  new Match( false, 'left', MulDivOpsLadder ),
-  leftEqualsPowerOpLadder,
-);
-
-export class MulOp extends SyntaxTreeNode {
-  left!: MulDivOpsOrLower | PowerOpOrLower;
-  right!: PowerOpOrLower;
-  
-  static rule: Caten = new Caten(
-    orLeftEqualsMulDivPowerOps,
-    token('*'),
-    new Match( false, 'right', PowerOpLadder ),
-  );
-}
-
-export class DivOp extends SyntaxTreeNode {
-  left!: MulDivOpsOrLower | PowerOpOrLower;
-  right!: PowerOpOrLower;
-  
-  static rule: Caten = new Caten(
-    orLeftEqualsMulDivPowerOps,
-    token('/'),
-    new Match( false, 'right', PowerOpLadder ),
-  );
-}
-
-const orLeftEqualsAddSubPowerOps = new Or(
-  new Match( false, 'left', AddSubOpsLadder ),
-  leftEqualsPowerOpLadder,
-);
-
-export class AddOp extends SyntaxTreeNode {
-  left!: AddSubOpsOrLower | PowerOpOrLower;
-  right!: MulDivOpsOrLower | PowerOpOrLower;
-  
-  static rule: Caten = new Caten(
-    orLeftEqualsAddSubPowerOps,
-    token('+'),
-    new Or(
-      new Match( false, 'right', MulDivOpsLadder ),
-      new Match( false, 'right', PowerOpLadder ),
-    ),
-  );
-}
-
-export class SubOp extends SyntaxTreeNode {
-  left!: AddSubOpsOrLower | PowerOpOrLower;
-  right!: MulDivOpsOrLower | PowerOpOrLower;
-  
-  static rule: Caten = new Caten(
-    orLeftEqualsAddSubPowerOps,
-    token('-'),
-    new Or(
-      new Match( false, 'right', MulDivOpsLadder ),
-      new Match( false, 'right', PowerOpLadder ),
-    ),
-  );
-}
-
-export class ModuloOp extends SyntaxTreeNode {
-  left!: LeftUnaryOpsOrLower;
-  right!: LeftUnaryOpsOrLower;
-  
-  static rule: Caten = new Caten(
-    leftEqualsLeftUnaryOpsLadder,
-    token('%'),
-    new Match( false, 'right', LeftUnaryOpsLadder ),
-  );
-}
-
-export class MagmaOp extends SyntaxTreeNode {
-  left!: MagmaOpOrLower;
-  right!: AddSubModuloOpsOrLower | PowerOpOrLower;
-  
-  static rule: Caten = new Caten(
-    new Match( false, 'left', MagmaOpLadder ),
-    token('++'),
-    new Match( false, 'right', AddSubModuloOpsLadder ),
-  );
-}
-
-export class ComparisonOp extends SyntaxTreeNode {
-  terms!: MagmaOpOrLower[];
-  ops!: (
-    | Token<'<'>
-    | Token<'<='>
-    | Token<'=='>
-    | Token<'!='>
-    | Token<'>'>
-    | Token<'>='>
-  )[];
-  
-  static rule = new Caten(
-    new Repeat(
-      new Match( true, 'terms', MagmaOpLadder ),
-      new Or(
-        new Match( true, 'ops', token('<')),
-        new Match( true, 'ops', token('<=')),
-        new Match( true, 'ops', token('==')),
-        new Match( true, 'ops', token('!=')),
-        new Match( true, 'ops', token('>')),
-        new Match( true, 'ops', token('>=')),
-      ),
-      2,
-    ),
+    new Match( false, 'expr', NegationOpLadder ),
   );
 }
 
 export class ConjunctionOp extends SyntaxTreeNode {
-  left!: ConjunctionOpOrLower;
-  right!: MagmaOpOrLower;
+  left!: Expr;
+  right!: Expr;
   
   static rule: Caten = new Caten(
     new Match( false, 'left', ConjunctionOpLadder ),
     token('&&'),
-    new Match( false, 'right', MagmaOpLadder ),
+    new Match( false, 'right', NegationOpLadder ),
   );
 }
 
 export class DisjunctionOp extends SyntaxTreeNode {
-  left!: DisjunctionOpOrLower;
-  right!: ConjunctionOpOrLower;
+  left!: Expr;
+  right!: Expr;
   
   static rule: Caten = new Caten(
     new Match( false, 'left', DisjunctionOpLadder ),
@@ -702,7 +477,7 @@ export class DisjunctionOp extends SyntaxTreeNode {
 }
 
 export class ImplicationOp extends SyntaxTreeNode {
-  terms!: DisjunctionOpOrLower;
+  terms!: Expr;
   ops!: (
     | Token<'-->'>
     | Token<'<--'>
@@ -722,40 +497,92 @@ export class ImplicationOp extends SyntaxTreeNode {
   );
 }
 
-export class ConditionalOp extends SyntaxTreeNode {
-  cond!: DisjunctionOpOrLower;
-  ifYes!: Expr | null;
-  ifNo!: ConditionalOpOrLower | null;
+export class ComplementOp extends SyntaxTreeNode {
+  expr!: Expr;
   
   static rule: Caten = new Caten(
-    new Match( false, 'cond', DisjunctionOpLadder ),
+    token('~'),
+    new Match( false, 'expr', ComplementOpLadder ),
+  );
+}
+
+export class IntersectionOp extends SyntaxTreeNode {
+  left!: Expr;
+  right!: Expr;
+  
+  static rule: Caten = new Caten(
+    new Match( false, 'left', IntersectionOpLadder ),
+    token('&'),
+    new Match( false, 'right', ComplementOpLadder ),
+  );
+}
+
+export class UnionOp extends SyntaxTreeNode {
+  left!: Expr;
+  right!: Expr;
+  
+  static rule: Caten = new Caten(
+    new Match( false, 'left', IntersectionOpLadder ),
+    token('|'),
+    new Match( false, 'right', ComplementOpLadder ),
+  );
+}
+
+export class TypeImplicationOp extends SyntaxTreeNode {
+  terms!: Expr;
+  ops!: (
+    | Token<'->'>
+    | Token<'<-'>
+    | Token<'<>'>
+  );
+  
+  static rule = new Caten(
+    new Repeat(
+      new Match( true, 'terms', UnionOpLadder ),
+      new Or(
+        new Match( true, 'ops', token('->')),
+        new Match( true, 'ops', token('<-')),
+        new Match( true, 'ops', token('<>')),
+      ),
+      2,
+    ),
+  );
+}
+
+export class ConditionalOp extends SyntaxTreeNode {
+  cond!: Expr;
+  ifYes!: Expr | null;
+  ifNo!: Expr | null;
+  
+  static rule: Caten = new Caten(
+    new Match( false, 'cond', TypeImplicationOpLadder ),
     new Or(
       new Caten(
         token('then'),
         new Match( false, 'ifYes', ExprLadder ),
         token('else'),
-        new Match( false, 'ifNo', ConditionalOpLadder ),
+        new Match( false, 'ifNo', TypeImplicationOpLadder ),
       ),
       new Caten(
         token('thand'),
-        new Match( false, 'ifYes', ConditionalOpLadder ),
+        new Match( false, 'ifYes', TypeImplicationOpLadder ),
       ),
       new Caten(
         token('thelse'),
-        new Match( false, 'ifNo', ConditionalOpLadder ),
+        new Match( false, 'ifNo', TypeImplicationOpLadder ),
       ),
     ),
   );
 }
 
 export class WhereOp extends SyntaxTreeNode {
-  left!: DisjunctionOpOrLower;
-  right!: ConditionalOpOrLower;
+  left!: Expr;
+  right!: Expr;
   
   name!: IdentifierToken;
   
   static rule = new Caten(
-    new Match( false, 'left', DisjunctionOpLadder ),
+    new Match( false, 'left', TypeImplicationOpLadder ),
     new Maybe(
       new Caten(
         token('as'),
@@ -763,13 +590,13 @@ export class WhereOp extends SyntaxTreeNode {
       ),
     ),
     token('where'),
-    new Match( false, 'right', ConditionalOpLadder ),
+    new Match( false, 'right', TypeImplicationOpLadder ),
   );
 }
 
 export class AstModule extends SyntaxTreeNode {
   imports!: Import[];
-  defs!: (AstType | AstFunction | AstLambda | AstVariable)[];
+  defs!: (AstType | AstFunction | AstVariable)[];
   
   static rule = new Caten(
     new Repeat(
@@ -777,10 +604,6 @@ export class AstModule extends SyntaxTreeNode {
     ),
     new Repeat(
       new Or(
-        new Caten(
-          new Match( true, 'defs', AstLambda ),
-          token(';'),
-        ),
         new Caten(
           new Match( true, 'defs', AstVariable ),
           token(';'),
@@ -799,32 +622,22 @@ equalsFunctionCallOp.match = FunctionCallOp;
 equalsMemberAccessOp.match = MemberAccessOp;
 equalsTypeArgumentList.match = TypeArgumentList;
 equalsNegationOp.match = NegationOp;
-equalsInverseOp.match = InverseOp;
-equalsPowerOp.match = PowerOp;
-equalsMulOp.match = MulOp;
-equalsDivOp.match = DivOp;
-equalsAddOp.match = AddOp;
-equalsSubOp.match = SubOp;
-equalsModuloOp.match = ModuloOp;
-equalsMagmaOp.match = MagmaOp;
-equalsComparisonOp.match = ComparisonOp;
 equalsConjunctionOp.match = ConjunctionOp;
 equalsDisjunctionOp.match = DisjunctionOp;
 equalsImplicationOp.match = ImplicationOp;
-equalsConditionalOp.match = ConditionalOp;
-equalsWhereOp.match = WhereOp;
-/*
 equalsComplementOp.match = ComplementOp;
 equalsIntersectionOp.match = IntersectionOp;
 equalsUnionOp.match = UnionOp;
 equalsTypeImplicationOp.match = TypeImplicationOp;
-*/
+equalsConditionalOp.match = ConditionalOp;
+equalsWhereOp.match = WhereOp;
+
+
 equalsExprLadder.match = ExprLadder;
 equalsReturnOp.match = ReturnOp;
 
 equalsBodyBlockOp.match = BlockOp;
 equalsDefaultArgExprLadder.match = ExprLadder;
-equalsExprExprLadder.match = ExprLadder;
 equalsTypeExprLadder0.match = ExprLadder;
 equalsTypeExprLadder1.match = ExprLadder;
 equalsTypeExprLadder2.match = ExprLadder;
