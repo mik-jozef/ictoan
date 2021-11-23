@@ -14,6 +14,7 @@ export const tokenizer = new Tokenizer(<const>[
   'All',
   'let',
   '!in',
+  '...',
   'Ex',
   'fn',
   'in',

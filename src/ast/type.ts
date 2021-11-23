@@ -1,4 +1,4 @@
-import { SyntaxTreeNode, IdentifierToken, Caten, Match, Maybe, Or, Repeat } from 'lr-parser-typescript';
+import { SyntaxTreeNode, IdentifierToken, Caten, Match, Maybe, Or, Repeat, Token } from 'lr-parser-typescript';
 
 import { token } from './tokenizer.js';
 
@@ -33,6 +33,7 @@ class BottomOfLadder extends SyntaxTreeNode {
   static rule = new Or(
     new Match( false, 'value', token('identifier') ),
     matchFunctionCall,
+    matchRecordTemplate,
     matchMemberAccess,
     matchExistentialQuantifier,
     matchUniversalQuantifier,
@@ -107,11 +108,14 @@ export class FunctionCall extends SyntaxTreeNode {
 }
 
 class RecordMember extends SyntaxTreeNode {
-  name!: IdentifierToken;
+  name!: IdentifierToken | Token<'...'>;
   type!: Type;
   
   static rule = new Caten(
-    new Match( false, 'name', token('identifier') ),
+    new Or(
+      new Match( false, 'name', token('identifier') ),
+      new Match( false, 'name', token('...') ),
+    ),
     token(':'),
     new Match( false, 'type', TypeLadder ),
     token(';'),

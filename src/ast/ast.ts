@@ -141,11 +141,7 @@ export class ObjectLiteral extends SyntaxTreeNode {
   
   static rule = new Caten(
     token('{'),
-    new Repeat(
-      new Match( true, 'props', Property ),
-      new Caten(),
-      1,
-    ),
+    new Repeat( new Match( true, 'props', Property ) ),
     token('}'),
   );
 }
