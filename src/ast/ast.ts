@@ -247,7 +247,7 @@ export class Conditional extends SyntaxTreeNode {
     token('then'),
     new Match( false, 'ifYes', ExprLadder ),
     token('else'),
-    new Match( false, 'ifNo', DisjunctionLadder ), // TODO perhaps allow Conditional?
+    new Match( false, 'ifNo', Conditional ),
   );
 }
 
