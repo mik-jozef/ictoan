@@ -33,8 +33,8 @@ async function main(path: string) {
   program.validate();
 }
 
-if ( 3 <= process.argv.length && process.argv.length < 4 ) {
-  main( process.argv[2] );
-} else {
-  console.log( "Usage: `node main.js path/to/program.nappl" );
+switch (process.argv.length) {
+  case 2: break;
+  case 3: main( process.argv[2] ); break;
+  default: console.log( "Usage: `node main.js path/to/program.nappl`." ); break;
 }

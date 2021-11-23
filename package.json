@@ -10,7 +10,7 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "lr-parser-typescript": "^0.0.3"
+    "lr-parser-typescript": "^0.0.4"
   },
   "type": "module"
 }

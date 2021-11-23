@@ -1,4 +1,4 @@
-import { SyntaxTreeNode, IdentifierToken, Token, Caten, Match, Maybe, Or, Repeat } from 'lr-parser-typescript';
+import { SyntaxTreeNode, IdentifierToken, Caten, Match, Maybe, Or, Repeat } from 'lr-parser-typescript';
 
 import { token } from './tokenizer.js';
 
