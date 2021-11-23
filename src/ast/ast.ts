@@ -195,7 +195,7 @@ export class TypeArgumentList extends SyntaxTreeNode {
   
   static rule: Caten = new Caten(
     new Match( false, 'expr', BottomOfLadder ),
-    token('.['), // This is a hack to avoid a grammar conflict. TODO is it necessary?
+    token('.['), // This is a hack to avoid a grammar conflict.
     new Repeat(
       new Caten(
         new Match( true, 'args', TypeLadder ),
