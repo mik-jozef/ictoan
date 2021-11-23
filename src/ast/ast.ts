@@ -14,7 +14,6 @@ const matchDisjunction = new Match( false, 'value', null! );
 const matchConditional = new Match( false, 'value', null! );
 
 const matchExprLadder = new Match( false, 'value', null! );
-const matchReturn = new Match( false, 'value', null! );
 const matchExprsVariable = new Match( true, 'exprs', null! );
 
 type Expr =
@@ -44,10 +43,7 @@ class BottomOfLadder extends SyntaxTreeNode {
     
     new Caten(
       token('('),
-      new Or(
-        matchExprLadder,
-        matchReturn, // TODO perhaps only in the conditional operator?
-      ),
+      matchExprLadder,
       token(')'),
     ),
   );
@@ -245,9 +241,15 @@ export class Conditional extends SyntaxTreeNode {
   static rule: Caten = new Caten(
     new Match( false, 'cond', DisjunctionLadder ),
     token('then'),
-    new Match( false, 'ifYes', ExprLadder ),
+    new Or(
+      new Match( false, 'ifYes', ExprLadder ),
+      new Match( false, 'ifYes', Return ),
+    ),
     token('else'),
-    new Match( false, 'ifNo', Conditional ),
+    new Or(
+      new Match( false, 'ifNo', Conditional ),
+      new Match( false, 'ifNo', Return ),
+    ),
   );
 }
 
@@ -363,5 +365,4 @@ matchDisjunction.match = Disjunction;
 matchConditional.match = Conditional;
 
 matchExprLadder.match = ExprLadder;
-matchReturn.match = Return;
 matchExprsVariable.match = Variable;
