@@ -36,5 +36,5 @@ async function main(path: string) {
 switch (process.argv.length) {
   case 2: break;
   case 3: main( process.argv[2] ); break;
-  default: console.log( "Usage: `node main.js path/to/program.nappl`." ); break;
+  default: console.log( "Usage: `node main.js path/to/program.ictoan`." ); break;
 }
