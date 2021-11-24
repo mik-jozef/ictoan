@@ -20,6 +20,6 @@ Required software: [Node.js](https://nodejs.org/en/).
    `mv parser-table.json local`. Yes, it needs to be done in two steps.
 
 Now you can use the type checker.  If `P` is a path to a `.ictoan` file, run
-`node local/out/main.js P` (still in the root of this repo) to typecheck its contents.
+`node local/out/main.js P` to typecheck its contents.
 
 (Ictoan stands for **I** **c**an't **t**hink **o**f **a** **n**ame.)
