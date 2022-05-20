@@ -1,6 +1,8 @@
 # The Ictoan Programming Language
 
-Work in progress (as of 23 November 2021).
+This repo was abandoned, as my thesis became a purely theoretical one
+without an implementation. I'm keeping the repo, because I kinda like
+the name.
 
 A toy programming language for my magister thesis.
 
